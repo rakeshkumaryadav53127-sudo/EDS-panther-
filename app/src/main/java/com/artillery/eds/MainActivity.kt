@@ -19,15 +19,11 @@ import androidx.core.content.ContextCompat
 import com.autel.drone.sdk.libbase.error.IAutelCode
 import com.autel.drone.sdk.vmodelx.SDKManager
 import com.autel.drone.sdk.vmodelx.interfaces.IAutelDroneDevice
-import com.autel.drone.sdk.vmodelx.interfaces.IDeviceListener
 import com.autel.drone.sdk.vmodelx.interfaces.IKeyManager
 import com.autel.drone.sdk.vmodelx.manager.DeviceManager
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.callback.CommonCallbacks
-import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.BatteryKey
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.FlightControlKey
-import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.GimbalKey
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.base.KeyTools
-import com.autel.drone.sdk.vmodelx.manager.keyvalue.value.flight.bean.DronePosition3D
 import com.autel.player.player.AutelPlayerManager
 import com.autel.player.player.AutelPlayerView
 import org.locationtech.proj4j.CRSFactory
@@ -62,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private var isTargetLocked = false
     private var shotCount = 0
 
+    // ड्रोन टेलीमेट्री वेरिएबल्स
     private var droneLat: Double = 0.0
     private var droneLon: Double = 0.0
     private var droneRelAlt: Double = 0.0
@@ -70,11 +67,14 @@ class MainActivity : AppCompatActivity() {
     private var gimbalPitch: Double = -90.0
 
     private var isDroneConnected = false
-    private var keyManager: IKeyManager? = null
+    private var connectedDrone: IAutelDroneDevice? = null
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var isVoiceListening = true
+
+    private val telemetryHandler = Handler(Looper.getMainLooper())
+    private var isMonitoring = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -171,65 +171,73 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initAutelSDK() {
-        SDKManager.get().init(applicationContext, true)
+        try {
+            SDKManager.get().init(applicationContext, true)
+            autelPlayerView?.let { playerView ->
+                AutelPlayerManager.getInstance().init(this, false)
+                AutelPlayerManager.getInstance().addAutelPlayer(playerView)
+            }
+        } catch (_: Exception) {}
 
-        autelPlayerView?.let { playerView ->
-            AutelPlayerManager.getInstance().init(this, false)
-            AutelPlayerManager.getInstance().addAutelPlayer(playerView)
-        }
+        startDeviceAndTelemetryLoop()
+    }
 
-        DeviceManager.getDeviceManager().addDroneDevicesListener(object : IDeviceListener<IAutelDroneDevice> {
-            override fun onDeviceChanged(devices: List<IAutelDroneDevice>) {
-                val drone = devices.firstOrNull()
-                if (drone != null && drone.isConnected()) {
-                    isDroneConnected = true
-                    keyManager = drone.getKeyManager()
-                    runOnUiThread {
-                        updateTopStatusBar()
-                        speak("Drone connected")
-                    }
-                    startDroneTelemetry()
-                } else {
-                    isDroneConnected = false
-                    runOnUiThread {
+    private fun startDeviceAndTelemetryLoop() {
+        isMonitoring = true
+        val runnable = object : Runnable {
+            override fun run() {
+                if (!isMonitoring) return
+                try {
+                    val drone = DeviceManager.getDeviceManager().getFirstDroneDevice()
+                    if (drone != null && drone.isConnected()) {
+                        if (!isDroneConnected) {
+                            isDroneConnected = true
+                            connectedDrone = drone
+                            speak("Drone connected")
+                        }
+                        readDroneStateSafely(drone)
+                    } else {
+                        isDroneConnected = false
+                        connectedDrone = null
                         tvZoneInfo?.text = "OT:360° | OFF | HDG:---°"
                         tvLiveAltitude?.text = "ALT: 0m"
                         tvLiveDroneGrid?.text = "TGT: Waiting for Drone..."
                     }
-                }
+                } catch (_: Exception) {}
+                telemetryHandler.postDelayed(this, 500)
             }
-        })
+        }
+        telemetryHandler.post(runnable)
     }
 
-    private fun startDroneTelemetry() {
-        val km = keyManager ?: return
+    // MSDK 2.5 के स्टेट डेटा को सुरक्षित रूप से पढ़ना
+    private fun readDroneStateSafely(drone: IAutelDroneDevice) {
+        try {
+            val stateData = drone.getDeviceStateData()
+            val flightData = stateData?.flightControlData
+            val gimbalData = stateData?.gimbalData
+            val batteryData = stateData?.batteryData
 
-        val locationKey = KeyTools.createKey(FlightControlKey.KeyDroneLocation)
-        km.listen(locationKey, object : CommonCallbacks.KeyListener<DronePosition3D> {
-            override fun onValueChange(oldValue: DronePosition3D?, newValue: DronePosition3D?) {
-                newValue?.let { pos ->
-                    droneLat = pos.latitude
-                    droneLon = pos.longitude
-                    droneRelAlt = pos.altitude
-                    updateLiveTargetDisplay()
+            if (flightData != null) {
+                droneLat = flightData.droneLatitude
+                droneLon = flightData.droneLongitude
+                droneRelAlt = flightData.altitude.toDouble()
+                droneYaw = (flightData.yaw.toDouble() + 360.0) % 360.0
+                if (flightData.homeAltitude != 0f) {
+                    takeoffGroundAmsl = flightData.homeAltitude.toDouble()
                 }
             }
-        })
-
-        val homeLocKey = KeyTools.createKey(FlightControlKey.KeyHomeLocation)
-        km.listen(homeLocKey, object : CommonCallbacks.KeyListener<DronePosition3D> {
-            override fun onValueChange(oldValue: DronePosition3D?, newValue: DronePosition3D?) {
-                newValue?.let { homePos ->
-                    if (homePos.altitude != 0.0) {
-                        takeoffGroundAmsl = homePos.altitude
-                    }
-                }
+            if (gimbalData != null) {
+                gimbalPitch = gimbalData.pitch.toDouble()
             }
-        })
+            if (batteryData != null) {
+                val batPercent = batteryData.remainingPowerPercent
+                tvDroneBattery?.text = "DRONE: $batPercent%"
+            }
+            updateLiveTargetDisplay()
+        } catch (_: Exception) {
+            updateTopStatusBar()
+        }
+    }
 
-        val yawKey = KeyTools.createKey(FlightControlKey.KeyDroneYaw)
-        km.listen(yawKey, object : CommonCallbacks.KeyListener<Double> {
-            override fun onValueChange(oldValue: Double?, newValue: Double?) {
-                newValue?.let {
-                    droneYaw = (it + 360.0) % 360.0
-                    updateLiveTargetDisplay()
+    private fun getCompassDirection(yaw: Double): String {
