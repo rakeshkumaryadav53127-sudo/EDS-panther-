@@ -29,6 +29,7 @@ import com.autel.player.player.AutelPlayerView
 import org.locationtech.proj4j.CRSFactory
 import org.locationtech.proj4j.CoordinateTransformFactory
 import org.locationtech.proj4j.ProjCoordinate
+import java.lang.reflect.Method
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.cos
@@ -58,7 +59,6 @@ class MainActivity : AppCompatActivity() {
     private var isTargetLocked = false
     private var shotCount = 0
 
-    // ड्रोन टेलीमेट्री वेरिएबल्स
     private var droneLat: Double = 0.0
     private var droneLon: Double = 0.0
     private var droneRelAlt: Double = 0.0
@@ -213,7 +213,8 @@ class MainActivity : AppCompatActivity() {
     private fun readNumberProperty(target: Any?, methodName: String): Double? {
         if (target == null) return null
         return try {
-            val method = target.javaClass.methods.firstOrNull { it.name == methodName && it.parameterCount == 0 }
+            val methods: Array<Method> = target.javaClass.methods
+            val method = methods.firstOrNull { m: Method -> m.name == methodName && m.parameterCount == 0 }
             val value = method?.invoke(target)
             (value as? Number)?.toDouble()
         } catch (_: Exception) {
@@ -224,7 +225,8 @@ class MainActivity : AppCompatActivity() {
     private fun readObjectProperty(target: Any?, methodName: String): Any? {
         if (target == null) return null
         return try {
-            val method = target.javaClass.methods.firstOrNull { it.name == methodName && it.parameterCount == 0 }
+            val methods: Array<Method> = target.javaClass.methods
+            val method = methods.firstOrNull { m: Method -> m.name == methodName && m.parameterCount == 0 }
             method?.invoke(target)
         } catch (_: Exception) {
             null
@@ -239,6 +241,3 @@ class MainActivity : AppCompatActivity() {
             if (flightData != null) {
                 droneLat = flightData.droneLatitude
                 droneLon = flightData.droneLongitude
-                droneRelAlt = flightData.altitude.toDouble()
-
-                // Yaw (दिशा) को सुरक्षित तरीके से पढ़ें
