@@ -1,3 +1,4 @@
+
 name: Build Android APK
 on: [push]
 
@@ -7,8 +8,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Fetch Autel SDK libs
+        uses: actions/checkout@v4
+        with:
+          repository: AutelSDK/MSDK2.5
+          path: temp_autel
+      - name: Copy Autel libs
         run: |
-          git clone --depth 1 https://github.com temp_autel
           mkdir -p app/libs
           find temp_autel -name "*.aar" -o -name "*.jar" | xargs -I {} cp {} app/libs/
           rm -rf temp_autel
