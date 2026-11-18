@@ -1,126 +1,203 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:background="#121212"
-    android:padding="12dp">
+    android:background="#121212">
 
-    <!-- बायां हिस्सा: डेटा और रीडिंग्स -->
+    <!-- बैकग्राउंड में ड्रोन का लाइव कैमरा वीडियो -->
+    <com.autel.player.player.AutelPlayerView
+        android:id="@+id/autel_player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- मुख्य ओवरले लेआउट -->
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1.2"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="12dp">
 
-        <TextView
-            android:id="@+id/tv_drone_battery"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Drone Battery: 85%"
-            android:textColor="#4CAF50"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/tv_rc_battery"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="RC Battery: 90%"
-            android:textColor="#4CAF50"
-            android:textSize="16sp"
-            android:layout_marginBottom="10dp" />
-
-        <TextView
-            android:id="@+id/tv_saved_easting"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Easting : --"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_saved_northing"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Northing: --"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_saved_height"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Height  : --"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:id="@+id/tv_fos_1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Shot 1: Waiting..."
-            android:textColor="#FFC107"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/tv_fos_2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Shot 2: Waiting..."
-            android:textColor="#FFC107"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/tv_distance_info"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Distance: 0 m"
-            android:textColor="#03A9F4"
-            android:textSize="15sp"
-            android:layout_marginTop="8dp" />
-    </LinearLayout>
-
-    <!-- दायां हिस्सा: कंट्रोल बटन -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="8dp">
-
-        <Button
-            android:id="@+id/btn_lock_target"
+        <!-- सबसे ऊपर की स्टेटस बार -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="LOCK TARGET"
-            android:backgroundTint="#2196F3"
-            android:textColor="#FFFFFF"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#99000000"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/tv_zone_info"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="OT:360° | OFF | HDG:---°"
+                android:textColor="#00E676"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_live_altitude"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="ALT: 0m"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_drone_battery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DRONE: --%"
+                android:textColor="#4CAF50"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- बीच का हिस्सा: बाएं रीडिंग्स और दाएं कंट्रोल बटन -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- बायां हिस्सा: डेटा और रीडिंग्स -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.2"
+                android:orientation="vertical"
+                android:background="#88000000"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/tv_rc_battery"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="RC Battery: 90%"
+                    android:textColor="#4CAF50"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:id="@+id/tv_saved_easting"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Easting : --"
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_saved_northing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Northing: --"
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_saved_height"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Height  : --"
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:layout_marginBottom="10dp" />
+
+                <TextView
+                    android:id="@+id/tv_fos_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Shot 1: Waiting..."
+                    android:textColor="#FFC107"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/tv_fos_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Shot 2: Waiting..."
+                    android:textColor="#FFC107"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/tv_distance_info"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="DIST: 0m"
+                    android:textColor="#03A9F4"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+
+            <!-- दायां हिस्सा: कंट्रोल बटन -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="8dp">
+
+                <Button
+                    android:id="@+id/btn_lock_target"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="LOCK TARGET"
+                    android:backgroundTint="#2196F3"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_record_shot"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="RECORD SHOT"
+                    android:backgroundTint="#FF9800"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_rth"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="RTH (RETURN)"
+                    android:backgroundTint="#F44336"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_voice"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="MIC: ON"
+                    android:backgroundTint="#4CAF50"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- सबसे नीचे लाइव टारगेट ग्रिड बार -->
+        <TextView
+            android:id="@+id/tv_live_drone_grid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#99000000"
+            android:padding="6dp"
+            android:text="TGT E:--- N:--- | HT:--m"
+            android:textColor="#00E676"
+            android:textSize="14sp"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:gravity="center"
+            android:layout_marginTop="6dp" />
 
-        <Button
-            android:id="@+id/btn_record_shot"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="RECORD SHOT"
-            android:backgroundTint="#FF9800"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/btn_rth"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="RTH (RETURN)"
-            android:backgroundTint="#F44336"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold" />
     </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>
