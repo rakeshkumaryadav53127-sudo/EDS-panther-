@@ -242,5 +242,80 @@ class MainActivity : AppCompatActivity() {
         val top = "S$shotCount E:${sE.roundToInt()} N:${sN.roundToInt()}"
         val bot = if (err <= 20.0) {
             speak("Target hit! Fire for effect!")
-            "TARGET HIT! FIRE FOR EFFECT (${err.roundToInt()}m)"
+            "TARGET HIT! FIRE FOR EFFECT (${err.roundToInt()}m)
         } else {
+            val lr = if (dE >= 0) "LEFT ${abs(dE).roundToInt()}" else "RIGHT ${abs(dE).roundToInt()}"
+            val ad = if (dN >= 0) "DROP ${abs(dN).roundToInt()}" else "ADD ${abs(dN).roundToInt()}"
+            speak("Shot $shotCount. $lr meters, $ad meters")
+            "$lr | $ad"
+        }
+        if (shotCount % 2 == 1) tvFos1?.text = "$top\n$bot" else tvFos2?.text = "$top\n$bot"
+    }
+
+    private fun sendRth() {
+        val km = connectedDrone?.getKeyManager()
+        if (isDroneConnected && km != null) {
+            val key = KeyTools.createKey(FlightControlKey.KeyStartGoHome)
+            km.performAction(key, null, object : CommonCallbacks.CompletionCallbackWithParam<Void> {
+                override fun onSuccess(t: Void?) { speak("Returning to home") }
+                override fun onFailure(code: IAutelCode, msg: String?) {}
+            })
+        } else {
+            speak("Drone not connected")
+        }
+    }
+
+    private fun initVoice() {
+        tts = TextToSpeech(this) { if (it == TextToSpeech.SUCCESS) tts?.language = Locale.US }
+        if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(p: Bundle?) {}
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(p: Float) {}
+                override fun onBufferReceived(p: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+                override fun onPartialResults(p: Bundle?) {}
+                override fun onEvent(p: Int, b: Bundle?) {}
+                override fun onError(e: Int) { if (isVoiceListening) handler.postDelayed({ startListening() }, 800) }
+                override fun onResults(r: Bundle?) {
+                    val txt = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase() ?: ""
+                    when {
+                        txt.contains("lock") || txt.contains("target") -> lockTarget()
+                        txt.contains("record") || txt.contains("shot") -> recordShot()
+                        txt.contains("return") || txt.contains("home") || txt.contains("rth") -> sendRth()
+                        txt.contains("height") || txt.contains("altitude") -> speak("Height ${droneRelAlt.roundToInt()} meters")
+                    }
+                    if (isVoiceListening) handler.postDelayed({ startListening() }, 800)
+                }
+            })
+            startListening()
+        }
+    }
+
+    private fun startListening() {
+        if (!isVoiceListening) return
+        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US)
+        }
+        try { speechRecognizer?.startListening(i) } catch (_: Exception) {}
+    }
+
+    private fun speak(msg: String) { tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, null) }
+
+    private fun checkPermissions() {
+        val p = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT)
+        val need = p.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (need.isNotEmpty()) ActivityCompat.requestPermissions(this, need.toTypedArray(), 101)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isVoiceListening = false
+        handler.removeCallbacksAndMessages(null)
+        speechRecognizer?.destroy()
+        tts?.shutdown()
+        AutelPlayerManager.getInstance().release()
+    }
+}
