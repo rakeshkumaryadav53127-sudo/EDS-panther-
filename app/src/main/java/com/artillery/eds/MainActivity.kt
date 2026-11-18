@@ -16,16 +16,18 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.autel.drone.sdk.v2.bean.DronePosition3D
-import com.autel.drone.sdk.v2.interfaces.IBaseDevice
-import com.autel.drone.sdk.v2.interfaces.IDeviceListener
-import com.autel.drone.sdk.v2.interfaces.IKeyManager
-import com.autel.drone.sdk.v2.sdk.SDKManager
-import com.autel.drone.sdk.v2.sdk.key.BatteryKey
-import com.autel.drone.sdk.v2.sdk.key.CommonCallbacks
-import com.autel.drone.sdk.v2.sdk.key.FlightControlKey
-import com.autel.drone.sdk.v2.sdk.key.GimbalKey
-import com.autel.drone.sdk.v2.sdk.key.KeyTools
+import com.autel.drone.sdk.libbase.error.IAutelCode
+import com.autel.drone.sdk.vmodelx.SDKManager
+import com.autel.drone.sdk.vmodelx.interfaces.IAutelDroneDevice
+import com.autel.drone.sdk.vmodelx.interfaces.IDeviceListener
+import com.autel.drone.sdk.vmodelx.interfaces.IKeyManager
+import com.autel.drone.sdk.vmodelx.manager.DeviceManager
+import com.autel.drone.sdk.vmodelx.manager.keyvalue.callback.CommonCallbacks
+import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.BatteryKey
+import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.FlightControlKey
+import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.GimbalKey
+import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.base.KeyTools
+import com.autel.drone.sdk.vmodelx.manager.keyvalue.value.flight.bean.DronePosition3D
 import com.autel.player.player.AutelPlayerManager
 import com.autel.player.player.AutelPlayerView
 import org.locationtech.proj4j.CRSFactory
@@ -60,10 +62,6 @@ class MainActivity : AppCompatActivity() {
     private var isTargetLocked = false
     private var shotCount = 0
 
-    // OT हमेशा 360° फिक्स रहेगी (गन को पास करने के लिए)
-    private val fixedOtBearingDeg: Double = 360.0
-
-    // ड्रोन टेलीमेट्री
     private var droneLat: Double = 0.0
     private var droneLon: Double = 0.0
     private var droneRelAlt: Double = 0.0
@@ -180,8 +178,8 @@ class MainActivity : AppCompatActivity() {
             AutelPlayerManager.getInstance().addAutelPlayer(playerView)
         }
 
-        SDKManager.get().addDeviceListener(object : IDeviceListener {
-            override fun onDeviceChanged(devices: List<IBaseDevice>) {
+        DeviceManager.getDeviceManager().addDroneDevicesListener(object : IDeviceListener<IAutelDroneDevice> {
+            override fun onDeviceChanged(devices: List<IAutelDroneDevice>) {
                 val drone = devices.firstOrNull()
                 if (drone != null && drone.isConnected()) {
                     isDroneConnected = true
@@ -235,9 +233,3 @@ class MainActivity : AppCompatActivity() {
                 newValue?.let {
                     droneYaw = (it + 360.0) % 360.0
                     updateLiveTargetDisplay()
-                }
-            }
-        })
-
-        val pitchKey = KeyTools.createKey(GimbalKey.KeyGimbalPitch)
-        km.listen(pitchKey, object : CommonCallbacks.KeyListener<Float> {
