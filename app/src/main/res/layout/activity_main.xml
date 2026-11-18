@@ -1,260 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://android.com"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#000000">
+<manifest xmlns:android="http://android.com">
 
-    <!-- बैकग्राउंड में ड्रोन का लाइव कैमरा वीडियो -->
-    <FrameLayout
-        android:id="@+id/autel_player_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.USB_PERMISSION" />
 
-    <!-- बीच में बड़ा लाल क्रॉसहेयर (+) -->
-    <FrameLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center">
+    <application
+        android:allowBackup="true"
+        android:label="EDS"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.AppCompat.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
 
-        <View
-            android:layout_width="48dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center"
-            android:background="#FF1744" />
-
-        <View
-            android:layout_width="4dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center"
-            android:background="#FF1744" />
-    </FrameLayout>
-
-    <!-- मुख्य ओवरले लेआउट -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="8dp">
-
-        <!-- सबसे ऊपर की स्टेटस बार -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="#AA000000"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp">
-
-            <TextView
-                android:id="@+id/tv_zone_info"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.8"
-                android:text="EDS | DRONE: OFF | OT: ---°"
-                android:textColor="#00E676"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_distance_info"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="DIST: 0m"
-                android:textColor="#FFC107"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:gravity="center" />
-
-            <TextView
-                android:id="@+id/tv_drone_battery"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="DRONE: --%"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:layout_marginEnd="10dp" />
-
-            <TextView
-                android:id="@+id/tv_rc_battery"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="RC: 90%"
-                android:textColor="#00E676"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:layout_marginEnd="10dp" />
-
-            <Button
-                android:id="@+id/btn_rth"
-                android:layout_width="64dp"
-                android:layout_height="34dp"
-                android:text="RTH"
-                android:textSize="12sp"
-                android:padding="0dp"
-                android:backgroundTint="#D32F2F"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- बीच का हिस्सा: बाएं LOCKED TARGET बॉक्स और दाएं FALL OF SHOTS बॉक्स -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:paddingTop="10dp">
-
-            <!-- बायां बॉक्स: LOCKED TARGET (SAVED) -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#B3101518"
-                android:padding="10dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="LOCKED TARGET (SAVED)"
-                    android:textColor="#FF5252"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/tv_saved_easting"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Easting : --"
-                    android:textColor="#FFFFFF"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_saved_northing"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Northing: --"
-                    android:textColor="#FFFFFF"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_saved_height"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Height  : --"
-                    android:textColor="#00E676"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-            <!-- बीच की खाली जगह ताकि कैमरा साफ दिखे -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1" />
-
-            <!-- दायां बॉक्स: FALL OF SHOTS (Correction) & FIRE FOR EFFECT -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#B3101518"
-                android:padding="10dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="FALL OF SHOTS (Correction)"
-                    android:textColor="#40C4FF"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/tv_fos_1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="S1: Waiting..."
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_fos_2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="S2: Waiting..."
-                    android:textColor="#B0BEC5"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/tv_ffe_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="READY FOR FIRE"
-                    android:textColor="#FFC107"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- सबसे नीचे की बार: बाएं लाइव ग्रिड और दाएं 3 बटन -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="#AA000000"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp">
-
-            <TextView
-                android:id="@+id/tv_live_drone_grid"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="TGT E: --- | N: --- | H: --m"
-                android:textColor="#00E676"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_voice"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:text="MIC: ON"
-                android:textSize="12sp"
-                android:backgroundTint="#2E7D32"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:layout_marginEnd="6dp" />
-
-            <Button
-                android:id="@+id/btn_lock_target"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:text="LOCK TARGET"
-                android:textSize="12sp"
-                android:backgroundTint="#1976D2"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:layout_marginEnd="6dp" />
-
-            <Button
-                android:id="@+id/btn_record_shot"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:text="RECORD SHOT"
-                android:textSize="12sp"
-                android:backgroundTint="#EF6C00"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-    </LinearLayout>
-</FrameLayout>
+</manifest>
