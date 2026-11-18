@@ -16,14 +16,14 @@ import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var tvSavedEasting: TextView
-    private lateinit var tvSavedNorthing: TextView
-    private lateinit var tvSavedHeight: TextView
-    private lateinit var tvFos1: TextView
-    private lateinit var tvFos2: TextView
-    private lateinit var tvDroneBattery: TextView
-    private lateinit var tvRcBattery: TextView
-    private lateinit var tvDistanceInfo: TextView
+    private var tvSavedEasting: TextView? = null
+    private var tvSavedNorthing: TextView? = null
+    private var tvSavedHeight: TextView? = null
+    private var tvFos1: TextView? = null
+    private var tvFos2: TextView? = null
+    private var tvDroneBattery: TextView? = null
+    private var tvRcBattery: TextView? = null
+    private var tvDistanceInfo: TextView? = null
 
     private var lockedEasting: Double = 0.0
     private var lockedNorthing: Double = 0.0
@@ -36,11 +36,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        initViews()
-        checkPermissions()
-        setupButtons()
+        try {
+            setContentView(R.layout.activity_main)
+            initViews()
+            checkPermissions()
+            setupButtons()
+        } catch (e: Exception) {
+            val errorText = TextView(this)
+            errorText.text = "App Error:\n${e.message}"
+            errorText.textSize = 16f
+            errorText.setPadding(40, 40, 40, 40)
+            setContentView(errorText)
+        }
     }
 
     private fun initViews() {
@@ -55,23 +62,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        val btnLockTarget: Button = findViewById(R.id.btn_lock_target)
-        val btnRecordShot: Button = findViewById(R.id.btn_record_shot)
-        val btnRth: Button = findViewById(R.id.btn_rth)
+        val btnLockTarget: Button? = findViewById(R.id.btn_lock_target)
+        val btnRecordShot: Button? = findViewById(R.id.btn_record_shot)
+        val btnRth: Button? = findViewById(R.id.btn_rth)
 
-        btnLockTarget.setOnClickListener {
+        btnLockTarget?.setOnClickListener {
             val grid = convertLatLonToGrid(currentDroneLat, currentDroneLon)
             lockedEasting = grid.x
             lockedNorthing = grid.y
             isTargetLocked = true
 
-            tvSavedEasting.text = "Easting : ${lockedEasting.roundToInt()}"
-            tvSavedNorthing.text = "Northing: ${lockedNorthing.roundToInt()}"
-            tvSavedHeight.text = "Height  : ${currentDroneAlt.roundToInt()} m"
+            tvSavedEasting?.text = "Easting : ${lockedEasting.roundToInt()}"
+            tvSavedNorthing?.text = "Northing: ${lockedNorthing.roundToInt()}"
+            tvSavedHeight?.text = "Height  : ${currentDroneAlt.roundToInt()} m"
             Toast.makeText(this, "Target Locked!", Toast.LENGTH_SHORT).show()
         }
 
-        btnRecordShot.setOnClickListener {
+        btnRecordShot?.setOnClickListener {
             if (!isTargetLocked) {
                 Toast.makeText(this, "Pehle Target Lock karein!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -85,13 +92,13 @@ class MainActivity : AppCompatActivity() {
             val resultText = "E: ${if (diffE >= 0) "+$diffE" else diffE}m | N: ${if (diffN >= 0) "+$diffN" else diffN}m"
 
             if (shotCount % 2 == 1) {
-                tvFos1.text = "Shot $shotCount: $resultText"
+                tvFos1?.text = "Shot $shotCount: $resultText"
             } else {
-                tvFos2.text = "Shot $shotCount: $resultText"
+                tvFos2?.text = "Shot $shotCount: $resultText"
             }
         }
 
-        btnRth.setOnClickListener {
+        btnRth?.setOnClickListener {
             Toast.makeText(this, "RTH Command Sent to Drone!", Toast.LENGTH_LONG).show()
         }
     }
