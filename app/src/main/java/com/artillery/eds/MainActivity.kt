@@ -235,7 +235,6 @@ class MainActivity : AppCompatActivity() {
         try {
             val stateData = drone.getDeviceStateData()
             val flightData = stateData?.flightControlData
-            val gimbalData = stateData?.gimbalData
 
             if (flightData != null) {
                 droneLat = flightData.droneLatitude
