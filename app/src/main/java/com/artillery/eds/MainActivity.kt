@@ -65,33 +65,41 @@ class MainActivity : AppCompatActivity() {
 
     private var isDroneConnected = false
     private var connectedDrone: IAutelDroneDevice? = null
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var tts: TextToSpeech? = null
-    private var isVoiceListening = true
-    private val handler = Handler(Looper.getMainLooper())
-
-    override fun onCreate(savedInstanceState: Bundle?) {
+        override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        try {
+            setContentView(R.layout.activity_main)
 
-        autelPlayerView = findViewById(R.id.autel_player_view)
-        tvZoneInfo = findViewById(R.id.tv_zone_info)
-        tvDistanceInfo = findViewById(R.id.tv_distance_info)
-        tvDroneBattery = findViewById(R.id.tv_drone_battery)
-        tvSavedEasting = findViewById(R.id.tv_saved_easting)
-        tvSavedNorthing = findViewById(R.id.tv_saved_northing)
-        tvSavedHeight = findViewById(R.id.tv_saved_height)
-        tvFos1 = findViewById(R.id.tv_fos_1)
-        tvFos2 = findViewById(R.id.tv_fos_2)
-        tvFfeStatus = findViewById(R.id.tv_ffe_status)
-        tvLiveDroneGrid = findViewById(R.id.tv_live_drone_grid)
-        btnVoice = findViewById(R.id.btn_voice)
+            autelPlayerView = findViewById(R.id.autel_player_view)
+            tvZoneInfo = findViewById(R.id.tv_zone_info)
+            tvDistanceInfo = findViewById(R.id.tv_distance_info)
+            tvDroneBattery = findViewById(R.id.tv_drone_battery)
+            tvSavedEasting = findViewById(R.id.tv_saved_easting)
+            tvSavedNorthing = findViewById(R.id.tv_saved_northing)
+            tvSavedHeight = findViewById(R.id.tv_saved_height)
+            tvFos1 = findViewById(R.id.tv_fos_1)
+            tvFos2 = findViewById(R.id.tv_fos_2)
+            tvFfeStatus = findViewById(R.id.tv_ffe_status)
+            tvLiveDroneGrid = findViewById(R.id.tv_live_drone_grid)
+            btnVoice = findViewById(R.id.btn_voice)
 
-        checkPermissions()
-        setupButtons()
-        initVoice()
-        initDrone()
+            checkPermissions()
+            setupButtons()
+            try { initVoice() } catch (_: Exception) {}
+            try { initDrone() } catch (e: Throwable) {
+                tvZoneInfo?.text = "SDK ERR: ${e.message}"
+            }
+        } catch (e: Throwable) {
+            val tv = TextView(this).apply {
+                text = "CRASH REASON:\n${e.stackTraceToString()}"
+                setTextColor(0xFFFFFFFF.toInt())
+                setBackgroundColor(0xFF000000.toInt())
+                setPadding(30, 30, 30, 30)
+            }
+            setContentView(tv)
+        }
     }
+
 
     private fun getProp(obj: Any?, name: String): Any? {
         if (obj == null) return null
