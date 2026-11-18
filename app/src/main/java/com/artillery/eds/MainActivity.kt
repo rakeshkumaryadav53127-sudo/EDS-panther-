@@ -255,11 +255,31 @@ class MainActivity : AppCompatActivity() {
     private fun sendRth() {
         val km = connectedDrone?.getKeyManager()
         if (isDroneConnected && km != null) {
-            val key = KeyTools.createKey(FlightControlKey.KeyStartAutoGoHome)
-            km.performAction(key, null, object : CommonCallbacks.CompletionCallbackWithParam<Void> {
-                override fun onSuccess(t: Void?) { speak("Returning to home") }
-                override fun onFailure(code: IAutelCode, msg: String?) {}
-            })
+            try {
+                val keyField = FlightControlKey::class.java.fields.firstOrNull {
+                    it.name.contains("GoHome", ignoreCase = true) || it.name.contains("Rth", ignoreCase = true)
+                }
+                val rawKey = keyField?.get(null)
+                if (rawKey != null) {
+                    val createMethod = KeyTools::class.java.methods.firstOrNull {
+                        it.name == "createKey" && it.parameterTypes.size == 1
+                    }
+                    val key = createMethod?.invoke(null, rawKey)
+                    val performMethod = km.javaClass.methods.firstOrNull {
+                        it.name == "performAction" && it.parameterTypes.size == 3
+                    }
+                    if (key != null && performMethod != null) {
+                        performMethod.invoke(km, key, null, object : CommonCallbacks.CompletionCallbackWithParam<Any> {
+                            override fun onSuccess(t: Any?) { speak("Returning to home") }
+                            override fun onFailure(code: IAutelCode, msg: String?) { speak("RTH failed") }
+                        })
+                        return
+                    }
+                }
+                speak("RTH key not supported")
+            } catch (_: Exception) {
+                speak("RTH command error")
+            }
         } else {
             speak("Drone not connected")
         }
