@@ -257,7 +257,9 @@ class MainActivity : AppCompatActivity() {
     private fun setupButtons() {
         findViewById<Button>(R.id.btn_lock_target)?.setOnClickListener { lockTarget() }
         findViewById<Button>(R.id.btn_record_shot)?.setOnClickListener { recordShot() }
-        findViewById<Button>(R.id.btn_rth)?.setOnClickListener { sendRth() }
+                val rthId = resources.getIdentifier("btn_rth", "id", packageName)
+        if (rthId != 0) findViewById<Button>(rthId)?.setOnClickListener { sendRth() }
+
         btnVoice?.setOnClickListener {
             isVoiceListening = !isVoiceListening
             btnVoice?.text = if (isVoiceListening) "MIC: ON" else "MIC: OFF"
