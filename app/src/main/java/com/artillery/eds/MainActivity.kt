@@ -64,7 +64,11 @@ class MainActivity : AppCompatActivity() {
     private var gimbalPitch = -90.0
 
     private var isDroneConnected = false
-    private var connectedDrone: IAutelDroneDevice? = null
+    private var connectedDrone: IAutelDroneDevice? = null    private var speechRecognizer: SpeechRecognizer? = null
+    private var tts: TextToSpeech? = null
+    private var isVoiceListening = true
+    private val handler = Handler(Looper.getMainLooper())
+
         override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
