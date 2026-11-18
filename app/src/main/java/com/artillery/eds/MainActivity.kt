@@ -64,30 +64,34 @@ class MainActivity : AppCompatActivity() {
     private var gimbalPitch = -90.0
 
     private var isDroneConnected = false
-        private var connectedDrone: IAutelDroneDevice? = null
+    private var connectedDrone: IAutelDroneDevice? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
-
     private var isVoiceListening = true
     private val handler = Handler(Looper.getMainLooper())
 
-        override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
             setContentView(R.layout.activity_main)
 
-            autelPlayerView = findViewById(R.id.autel_player_view)
-            tvZoneInfo = findViewById(R.id.tv_zone_info)
-            tvDistanceInfo = findViewById(R.id.tv_distance_info)
-            tvDroneBattery = findViewById(R.id.tv_drone_battery)
-            tvSavedEasting = findViewById(R.id.tv_saved_easting)
-            tvSavedNorthing = findViewById(R.id.tv_saved_northing)
-            tvSavedHeight = findViewById(R.id.tv_saved_height)
-            tvFos1 = findViewById(R.id.tv_fos_1)
-            tvFos2 = findViewById(R.id.tv_fos_2)
-            tvFfeStatus = findViewById(R.id.tv_ffe_status)
-            tvLiveDroneGrid = findViewById(R.id.tv_live_drone_grid)
-            btnVoice = findViewById(R.id.btn_voice)
+            fun <T : View> v(name: String): T? {
+                val id = resources.getIdentifier(name, "id", packageName)
+                return if (id != 0) findViewById(id) else null
+            }
+
+            autelPlayerView = v("autel_player_view")
+            tvZoneInfo = v("tv_zone_info")
+            tvDistanceInfo = v("tv_distance_info")
+            tvDroneBattery = v("tv_drone_battery")
+            tvSavedEasting = v("tv_saved_easting")
+            tvSavedNorthing = v("tv_saved_northing")
+            tvSavedHeight = v("tv_saved_height")
+            tvFos1 = v("tv_fos_1")
+            tvFos2 = v("tv_fos_2")
+            tvFfeStatus = v("tv_ffe_status")
+            tvLiveDroneGrid = v("tv_live_drone_grid")
+            btnVoice = v("btn_voice")
 
             checkPermissions()
             setupButtons()
@@ -106,7 +110,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private fun getProp(obj: Any?, name: String): Any? {
         if (obj == null) return null
         return try {
@@ -114,7 +117,6 @@ class MainActivity : AppCompatActivity() {
             m.invoke(obj)
         } catch (_: Exception) { null }
     }
-
     private fun startVideoFeed() {
         val container = autelPlayerView as? ViewGroup ?: return
         try {
@@ -166,6 +168,7 @@ class MainActivity : AppCompatActivity() {
             SDKManager.get().init(applicationContext, true)
             startVideoFeed()
         } catch (_: Exception) {}
+
         val loop = object : Runnable {
             override fun run() {
                 try {
@@ -255,9 +258,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun setupButtons() {
-        findViewById<Button>(R.id.btn_lock_target)?.setOnClickListener { lockTarget() }
-        findViewById<Button>(R.id.btn_record_shot)?.setOnClickListener { recordShot() }
-                val rthId = resources.getIdentifier("btn_rth", "id", packageName)
+        val lockId = resources.getIdentifier("btn_lock_target", "id", packageName)
+        if (lockId != 0) findViewById<Button>(lockId)?.setOnClickListener { lockTarget() }
+        val shotId = resources.getIdentifier("btn_record_shot", "id", packageName)
+        if (shotId != 0) findViewById<Button>(shotId)?.setOnClickListener { recordShot() }
+        val rthId = resources.getIdentifier("btn_rth", "id", packageName)
         if (rthId != 0) findViewById<Button>(rthId)?.setOnClickListener { sendRth() }
 
         btnVoice?.setOnClickListener {
