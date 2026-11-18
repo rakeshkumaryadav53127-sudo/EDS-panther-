@@ -11,6 +11,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -100,19 +101,57 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { null }
     }
 
+    private fun startVideoFeed() {
+        val container = autelPlayerView as? ViewGroup ?: return
+        try {
+            val pm = AutelPlayerManager.getInstance()
+            pm.javaClass.methods.firstOrNull { it.name == "init" && it.parameterTypes.size == 2 }
+                ?.invoke(pm, this, false)
+
+            val viewClassNames = listOf(
+                "com.autel.player.player.AutelPlayerView",
+                "com.autel.player.widget.AutelPlayerView",
+                "com.autel.player.view.AutelPlayerView",
+                "com.autel.drone.sdk.vmodelx.player.AutelPlayerView"
+            )
+            var playerViewObj: View? = null
+            for (clsName in viewClassNames) {
+                try {
+                    val cls = Class.forName(clsName)
+                    val ctor = cls.getConstructor(android.content.Context::class.java)
+                    playerViewObj = ctor.newInstance(this) as? View
+                    if (playerViewObj != null) break
+                } catch (_: Exception) {}
+            }
+
+            val playerCls = Class.forName("com.autel.player.player.AutelPlayer")
+            val playerCtor = playerCls.constructors.firstOrNull { it.parameterTypes.size == 1 }
+            val playerObj = playerCtor?.newInstance(0) ?: playerCls.getConstructor().newInstance()
+
+            if (playerViewObj != null) {
+                container.removeAllViews()
+                container.addView(
+                    playerViewObj,
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+                playerCls.methods.firstOrNull { it.name == "addVideoView" && it.parameterTypes.size == 1 }
+                    ?.invoke(playerObj, playerViewObj)
+            }
+
+            pm.javaClass.methods.firstOrNull { it.name == "addAutelPlayer" && it.parameterTypes.size == 1 }
+                ?.invoke(pm, playerObj)
+            playerCls.methods.firstOrNull { it.name == "startPlayer" }?.invoke(playerObj)
+        } catch (_: Exception) {}
+    }
+
     private fun initDrone() {
         try {
             SDKManager.get().init(applicationContext, true)
-            val pv = autelPlayerView
-            if (pv != null) {
-                val pm = AutelPlayerManager.getInstance()
-                pm.javaClass.methods.firstOrNull { it.name == "init" && it.parameterTypes.size == 2 }
-                    ?.invoke(pm, this, false)
-                pm.javaClass.methods.firstOrNull { it.name == "addAutelPlayer" && it.parameterTypes.size == 1 }
-                    ?.invoke(pm, pv)
-            }
+            startVideoFeed()
         } catch (_: Exception) {}
-
         val loop = object : Runnable {
             override fun run() {
                 try {
@@ -121,6 +160,7 @@ class MainActivity : AppCompatActivity() {
                         if (!isDroneConnected) {
                             isDroneConnected = true
                             connectedDrone = drone
+                            startVideoFeed()
                             speak("Drone connected")
                         }
                         val state = drone.getDeviceStateData()
@@ -200,7 +240,6 @@ class MainActivity : AppCompatActivity() {
             tvDistanceInfo?.text = "DIST: ${hypot(tE - lockedEasting, tN - lockedNorthing).roundToInt()}m"
         }
     }
-
     private fun setupButtons() {
         findViewById<Button>(R.id.btn_lock_target)?.setOnClickListener { lockTarget() }
         findViewById<Button>(R.id.btn_record_shot)?.setOnClickListener { recordShot() }
