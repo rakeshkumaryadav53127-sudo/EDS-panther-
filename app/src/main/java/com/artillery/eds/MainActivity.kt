@@ -102,13 +102,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initDrone() {
-        try {
+                try {
             SDKManager.get().init(applicationContext, true)
-            autelPlayerView?.let {
-                AutelPlayerManager.getInstance().init(this, false)
-                AutelPlayerManager.getInstance().addAutelPlayer(it)
+            val pv = autelPlayerView
+            if (pv != null) {
+                val pm = AutelPlayerManager.getInstance()
+                pm.javaClass.methods.firstOrNull { it.name == "init" && it.parameterTypes.size == 2 }
+                    ?.invoke(pm, this, false)
+                pm.javaClass.methods.firstOrNull { it.name == "addAutelPlayer" && it.parameterTypes.size == 1 }
+                    ?.invoke(pm, pv)
             }
         } catch (_: Exception) {}
+
 
         val loop = object : Runnable {
             override fun run() {
