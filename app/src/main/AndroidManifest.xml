@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://android.com"
-    xmlns:tools="http://android.com"
-    package="com.artillery.eds">
+    xmlns:tools="http://android.com">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -33,4 +32,3 @@
         </activity>
     </application>
 </manifest>
-
