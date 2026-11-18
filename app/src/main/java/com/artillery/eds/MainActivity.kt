@@ -10,9 +10,9 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,7 +24,6 @@ import com.autel.drone.sdk.vmodelx.manager.keyvalue.callback.CommonCallbacks
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.FlightControlKey
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.base.KeyTools
 import com.autel.player.player.AutelPlayerManager
-import com.autel.player.player.AutelPlayerView
 import org.locationtech.proj4j.CRSFactory
 import org.locationtech.proj4j.CoordinateTransformFactory
 import org.locationtech.proj4j.ProjCoordinate
@@ -38,9 +37,8 @@ import kotlin.math.tan
 
 class MainActivity : AppCompatActivity() {
 
-    private var autelPlayerView: AutelPlayerView? = null
+    private var autelPlayerView: View? = null
     private var tvZoneInfo: TextView? = null
-    private var tvLiveAltitude: TextView? = null
     private var tvDistanceInfo: TextView? = null
     private var tvDroneBattery: TextView? = null
     private var tvSavedEasting: TextView? = null
@@ -48,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private var tvSavedHeight: TextView? = null
     private var tvFos1: TextView? = null
     private var tvFos2: TextView? = null
+    private var tvFfeStatus: TextView? = null
     private var tvLiveDroneGrid: TextView? = null
     private var btnVoice: Button? = null
 
@@ -76,7 +75,6 @@ class MainActivity : AppCompatActivity() {
 
         autelPlayerView = findViewById(R.id.autel_player_view)
         tvZoneInfo = findViewById(R.id.tv_zone_info)
-        tvLiveAltitude = findViewById(R.id.tv_live_altitude)
         tvDistanceInfo = findViewById(R.id.tv_distance_info)
         tvDroneBattery = findViewById(R.id.tv_drone_battery)
         tvSavedEasting = findViewById(R.id.tv_saved_easting)
@@ -84,6 +82,7 @@ class MainActivity : AppCompatActivity() {
         tvSavedHeight = findViewById(R.id.tv_saved_height)
         tvFos1 = findViewById(R.id.tv_fos_1)
         tvFos2 = findViewById(R.id.tv_fos_2)
+        tvFfeStatus = findViewById(R.id.tv_ffe_status)
         tvLiveDroneGrid = findViewById(R.id.tv_live_drone_grid)
         btnVoice = findViewById(R.id.btn_voice)
 
@@ -102,7 +101,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initDrone() {
-                try {
+        try {
             SDKManager.get().init(applicationContext, true)
             val pv = autelPlayerView
             if (pv != null) {
@@ -113,7 +112,6 @@ class MainActivity : AppCompatActivity() {
                     ?.invoke(pm, pv)
             }
         } catch (_: Exception) {}
-
 
         val loop = object : Runnable {
             override fun run() {
@@ -153,7 +151,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         isDroneConnected = false
                         connectedDrone = null
-                        tvZoneInfo?.text = "OT:360° | OFF | HDG:---°"
+                        tvZoneInfo?.text = "EDS | DRONE: OFF | OT: ---°"
                     }
                 } catch (_: Exception) {}
                 handler.postDelayed(this, 500)
@@ -193,12 +191,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUI() {
         val hdg = droneYaw.roundToInt()
-        tvZoneInfo?.text = "OT:360° | HDG:${if (hdg == 0) 360 else hdg}°(${getDir(droneYaw)})"
+        tvZoneInfo?.text = "EDS | DRONE: CONNECTED | OT: ${if (hdg == 0) 360 else hdg}°(${getDir(droneYaw)})"
         if (droneLat == 0.0 || droneLon == 0.0) return
 
         val (tE, tN) = getTargetGrid()
-        tvLiveAltitude?.text = "ALT: ${droneRelAlt.roundToInt()}m"
-        tvLiveDroneGrid?.text = "TGT E:${tE.roundToInt()} N:${tN.roundToInt()} | HT:${takeoffGroundAmsl.roundToInt()}m"
+        tvLiveDroneGrid?.text = "TGT E: ${tE.roundToInt()} | N: ${tN.roundToInt()} | H: ${takeoffGroundAmsl.roundToInt()}m (${gimbalPitch.roundToInt()}°)"
         if (isTargetLocked) {
             tvDistanceInfo?.text = "DIST: ${hypot(tE - lockedEasting, tN - lockedNorthing).roundToInt()}m"
         }
@@ -227,9 +224,11 @@ class MainActivity : AppCompatActivity() {
         shotCount = 0
         tvSavedEasting?.text = "Easting : ${tE.roundToInt()}"
         tvSavedNorthing?.text = "Northing: ${tN.roundToInt()}"
-        tvSavedHeight?.text = "Tgt Ht  : ${takeoffGroundAmsl.roundToInt()}m"
-        tvFos1?.text = "Shot 1: Ready"
-        tvFos2?.text = "Shot 2: Ready"
+        tvSavedHeight?.text = "Height  : ${takeoffGroundAmsl.roundToInt()} m (${gimbalPitch.roundToInt()}°)"
+        tvFos1?.text = "S1: Ready"
+        tvFos2?.text = "S2: Ready"
+        tvFfeStatus?.text = "ADJUSTING FIRE..."
+        tvFfeStatus?.setTextColor(0xFFFFC107.toInt())
         speak("Target locked")
     }
 
@@ -245,16 +244,19 @@ class MainActivity : AppCompatActivity() {
         shotCount++
 
         val top = "S$shotCount E:${sE.roundToInt()} N:${sN.roundToInt()}"
-        val bot = if (err <= 20.0) {
+        if (err <= 20.0) {
             speak("Target hit! Fire for effect!")
-            "TARGET HIT! FIRE FOR EFFECT (${err.roundToInt()}m)"
+            tvFfeStatus?.text = "FIRE FOR EFFECT! (${err.roundToInt()}m)"
+            tvFfeStatus?.setTextColor(0xFF00E676.toInt())
+            if (shotCount % 2 == 1) tvFos1?.text = "$top (HIT)" else tvFos2?.text = "$top (HIT)"
         } else {
             val lr = if (dE >= 0) "LEFT ${abs(dE).roundToInt()}" else "RIGHT ${abs(dE).roundToInt()}"
             val ad = if (dN >= 0) "DROP ${abs(dN).roundToInt()}" else "ADD ${abs(dN).roundToInt()}"
             speak("Shot $shotCount. $lr meters, $ad meters")
-            "$lr | $ad"
+            tvFfeStatus?.text = "$lr | $ad"
+            tvFfeStatus?.setTextColor(0xFF40C4FF.toInt())
+            if (shotCount % 2 == 1) tvFos1?.text = top else tvFos2?.text = top
         }
-        if (shotCount % 2 == 1) tvFos1?.text = "$top\n$bot" else tvFos2?.text = "$top\n$bot"
     }
 
     private fun sendRth() {
