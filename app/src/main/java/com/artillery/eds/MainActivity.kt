@@ -236,10 +236,10 @@ class MainActivity : AppCompatActivity() {
             val stateData = drone.getDeviceStateData()
             val flightData = stateData?.flightControlData
             val gimbalData = stateData?.gimbalData
-            val batteryData = stateData?.batteryData
 
             if (flightData != null) {
                 droneLat = flightData.droneLatitude
                 droneLon = flightData.droneLongitude
                 droneRelAlt = flightData.altitude.toDouble()
 
+                // Yaw (दिशा) को सुरक्षित तरीके से पढ़ें
