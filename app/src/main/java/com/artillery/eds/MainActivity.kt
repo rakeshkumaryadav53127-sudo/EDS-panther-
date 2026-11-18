@@ -210,7 +210,27 @@ class MainActivity : AppCompatActivity() {
         telemetryHandler.post(runnable)
     }
 
-    // MSDK 2.5 के स्टेट डेटा को सुरक्षित रूप से पढ़ना
+    private fun readNumberProperty(target: Any?, methodName: String): Double? {
+        if (target == null) return null
+        return try {
+            val method = target.javaClass.methods.firstOrNull { it.name == methodName && it.parameterCount == 0 }
+            val value = method?.invoke(target)
+            (value as? Number)?.toDouble()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readObjectProperty(target: Any?, methodName: String): Any? {
+        if (target == null) return null
+        return try {
+            val method = target.javaClass.methods.firstOrNull { it.name == methodName && it.parameterCount == 0 }
+            method?.invoke(target)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun readDroneStateSafely(drone: IAutelDroneDevice) {
         try {
             val stateData = drone.getDeviceStateData()
@@ -222,22 +242,4 @@ class MainActivity : AppCompatActivity() {
                 droneLat = flightData.droneLatitude
                 droneLon = flightData.droneLongitude
                 droneRelAlt = flightData.altitude.toDouble()
-                droneYaw = (flightData.yaw.toDouble() + 360.0) % 360.0
-                if (flightData.homeAltitude != 0f) {
-                    takeoffGroundAmsl = flightData.homeAltitude.toDouble()
-                }
-            }
-            if (gimbalData != null) {
-                gimbalPitch = gimbalData.pitch.toDouble()
-            }
-            if (batteryData != null) {
-                val batPercent = batteryData.remainingPowerPercent
-                tvDroneBattery?.text = "DRONE: $batPercent%"
-            }
-            updateLiveTargetDisplay()
-        } catch (_: Exception) {
-            updateTopStatusBar()
-        }
-    }
 
-    private fun getCompassDirection(yaw: Double): String {
