@@ -242,7 +242,7 @@ class MainActivity : AppCompatActivity() {
         val top = "S$shotCount E:${sE.roundToInt()} N:${sN.roundToInt()}"
         val bot = if (err <= 20.0) {
             speak("Target hit! Fire for effect!")
-            "TARGET HIT! FIRE FOR EFFECT (${err.roundToInt()}m)
+            "TARGET HIT! FIRE FOR EFFECT (${err.roundToInt()}m)"
         } else {
             val lr = if (dE >= 0) "LEFT ${abs(dE).roundToInt()}" else "RIGHT ${abs(dE).roundToInt()}"
             val ad = if (dN >= 0) "DROP ${abs(dN).roundToInt()}" else "ADD ${abs(dN).roundToInt()}"
@@ -255,7 +255,7 @@ class MainActivity : AppCompatActivity() {
     private fun sendRth() {
         val km = connectedDrone?.getKeyManager()
         if (isDroneConnected && km != null) {
-            val key = KeyTools.createKey(FlightControlKey.KeyStartGoHome)
+            val key = KeyTools.createKey(FlightControlKey.KeyStartAutoGoHome)
             km.performAction(key, null, object : CommonCallbacks.CompletionCallbackWithParam<Void> {
                 override fun onSuccess(t: Void?) { speak("Returning to home") }
                 override fun onFailure(code: IAutelCode, msg: String?) {}
