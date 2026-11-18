@@ -19,7 +19,6 @@ import androidx.core.content.ContextCompat
 import com.autel.drone.sdk.libbase.error.IAutelCode
 import com.autel.drone.sdk.vmodelx.SDKManager
 import com.autel.drone.sdk.vmodelx.interfaces.IAutelDroneDevice
-import com.autel.drone.sdk.vmodelx.interfaces.IKeyManager
 import com.autel.drone.sdk.vmodelx.manager.DeviceManager
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.callback.CommonCallbacks
 import com.autel.drone.sdk.vmodelx.manager.keyvalue.key.FlightControlKey
@@ -29,7 +28,6 @@ import com.autel.player.player.AutelPlayerView
 import org.locationtech.proj4j.CRSFactory
 import org.locationtech.proj4j.CoordinateTransformFactory
 import org.locationtech.proj4j.ProjCoordinate
-import java.lang.reflect.Method
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.cos
@@ -45,7 +43,6 @@ class MainActivity : AppCompatActivity() {
     private var tvLiveAltitude: TextView? = null
     private var tvDistanceInfo: TextView? = null
     private var tvDroneBattery: TextView? = null
-    private var tvRcBattery: TextView? = null
     private var tvSavedEasting: TextView? = null
     private var tvSavedNorthing: TextView? = null
     private var tvSavedHeight: TextView? = null
@@ -54,49 +51,34 @@ class MainActivity : AppCompatActivity() {
     private var tvLiveDroneGrid: TextView? = null
     private var btnVoice: Button? = null
 
-    private var lockedEasting: Double = 0.0
-    private var lockedNorthing: Double = 0.0
+    private var lockedEasting = 0.0
+    private var lockedNorthing = 0.0
     private var isTargetLocked = false
     private var shotCount = 0
 
-    private var droneLat: Double = 0.0
-    private var droneLon: Double = 0.0
-    private var droneRelAlt: Double = 0.0
-    private var takeoffGroundAmsl: Double = 0.0
-    private var droneYaw: Double = 0.0
-    private var gimbalPitch: Double = -90.0
+    private var droneLat = 0.0
+    private var droneLon = 0.0
+    private var droneRelAlt = 0.0
+    private var takeoffGroundAmsl = 0.0
+    private var droneYaw = 0.0
+    private var gimbalPitch = -90.0
 
     private var isDroneConnected = false
     private var connectedDrone: IAutelDroneDevice? = null
-
     private var speechRecognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var isVoiceListening = true
-
-    private val telemetryHandler = Handler(Looper.getMainLooper())
-    private var isMonitoring = false
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            setContentView(R.layout.activity_main)
-            initViews()
-            checkPermissions()
-            setupButtons()
-            initVoiceSystem()
-            initAutelSDK()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Init Error: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
+        setContentView(R.layout.activity_main)
 
-    private fun initViews() {
         autelPlayerView = findViewById(R.id.autel_player_view)
         tvZoneInfo = findViewById(R.id.tv_zone_info)
         tvLiveAltitude = findViewById(R.id.tv_live_altitude)
         tvDistanceInfo = findViewById(R.id.tv_distance_info)
         tvDroneBattery = findViewById(R.id.tv_drone_battery)
-        tvRcBattery = findViewById(R.id.tv_rc_battery)
         tvSavedEasting = findViewById(R.id.tv_saved_easting)
         tvSavedNorthing = findViewById(R.id.tv_saved_northing)
         tvSavedHeight = findViewById(R.id.tv_saved_height)
@@ -104,89 +86,32 @@ class MainActivity : AppCompatActivity() {
         tvFos2 = findViewById(R.id.tv_fos_2)
         tvLiveDroneGrid = findViewById(R.id.tv_live_drone_grid)
         btnVoice = findViewById(R.id.btn_voice)
+
+        checkPermissions()
+        setupButtons()
+        initVoice()
+        initDrone()
     }
 
-    private fun initVoiceSystem() {
-        tts = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.US
-            }
-        }
-
-        if (SpeechRecognizer.isRecognitionAvailable(this)) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {}
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {}
-                override fun onPartialResults(partialResults: Bundle?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-
-                override fun onError(error: Int) {
-                    if (isVoiceListening) restartListeningWithDelay()
-                }
-
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val spokenText = matches?.firstOrNull()?.lowercase(Locale.ROOT) ?: ""
-
-                    when {
-                        spokenText.contains("lock") || spokenText.contains("target") -> performLockTarget()
-                        spokenText.contains("record") || spokenText.contains("shot") || spokenText.contains("fire") -> performRecordShot()
-                        spokenText.contains("return") || spokenText.contains("home") || spokenText.contains("rth") -> performRthCommand()
-                        spokenText.contains("height") || spokenText.contains("altitude") -> speak("Drone height is ${droneRelAlt.roundToInt()} meters")
-                        spokenText.contains("direction") || spokenText.contains("heading") -> {
-                            val deg = droneYaw.roundToInt()
-                            speak("Drone heading $deg degrees ${getCompassDirection(droneYaw)}")
-                        }
-                    }
-                    if (isVoiceListening) restartListeningWithDelay()
-                }
-            })
-            startListening()
-        }
+    private fun getProp(obj: Any?, name: String): Any? {
+        if (obj == null) return null
+        return try {
+            val m = obj.javaClass.getMethod(name)
+            m.invoke(obj)
+        } catch (_: Exception) { null }
     }
 
-    private fun startListening() {
-        if (!isVoiceListening) return
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US)
-        }
-        try {
-            speechRecognizer?.startListening(intent)
-        } catch (_: Exception) {}
-    }
-
-    private fun restartListeningWithDelay() {
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (isVoiceListening) startListening()
-        }, 800)
-    }
-
-    private fun speak(message: String) {
-        tts?.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
-    }
-
-    private fun initAutelSDK() {
+    private fun initDrone() {
         try {
             SDKManager.get().init(applicationContext, true)
-            autelPlayerView?.let { playerView ->
+            autelPlayerView?.let {
                 AutelPlayerManager.getInstance().init(this, false)
-                AutelPlayerManager.getInstance().addAutelPlayer(playerView)
+                AutelPlayerManager.getInstance().addAutelPlayer(it)
             }
         } catch (_: Exception) {}
 
-        startDeviceAndTelemetryLoop()
-    }
-
-    private fun startDeviceAndTelemetryLoop() {
-        isMonitoring = true
-        val runnable = object : Runnable {
+        val loop = object : Runnable {
             override fun run() {
-                if (!isMonitoring) return
                 try {
                     val drone = DeviceManager.getDeviceManager().getFirstDroneDevice()
                     if (drone != null && drone.isConnected()) {
@@ -195,49 +120,127 @@ class MainActivity : AppCompatActivity() {
                             connectedDrone = drone
                             speak("Drone connected")
                         }
-                        readDroneStateSafely(drone)
+                        val state = drone.getDeviceStateData()
+                        val flight = state?.flightControlData
+                        if (flight != null) {
+                            droneLat = flight.droneLatitude
+                            droneLon = flight.droneLongitude
+                            droneRelAlt = flight.altitude.toDouble()
+
+                            val att = getProp(flight, "getDroneAttitude")
+                            val y = (getProp(att, "getYaw") as? Number)?.toDouble()
+                                ?: (getProp(flight, "getYaw") as? Number)?.toDouble()
+                            if (y != null) droneYaw = (y + 360.0) % 360.0
+
+                            val home = getProp(flight, "getHomeLocation")
+                            val hAlt = (getProp(home, "getAltitude") as? Number)?.toDouble()
+                            if (hAlt != null && hAlt != 0.0) takeoffGroundAmsl = hAlt
+                        }
+                        val gimbal = getProp(state, "getGimbalInfo") ?: getProp(state, "getGimbalData")
+                        val p = (getProp(gimbal, "getPitch") as? Number)?.toDouble()
+                        if (p != null) gimbalPitch = p
+
+                        val bat = getProp(state, "getBatteryInfo") ?: getProp(state, "getBatteryData")
+                        val b = (getProp(bat, "getRemainingPowerPercent") as? Number)?.toInt()
+                        if (b != null) tvDroneBattery?.text = "DRONE: $b%"
+
+                        updateUI()
                     } else {
                         isDroneConnected = false
                         connectedDrone = null
                         tvZoneInfo?.text = "OT:360° | OFF | HDG:---°"
-                        tvLiveAltitude?.text = "ALT: 0m"
-                        tvLiveDroneGrid?.text = "TGT: Waiting for Drone..."
                     }
                 } catch (_: Exception) {}
-                telemetryHandler.postDelayed(this, 500)
+                handler.postDelayed(this, 500)
             }
         }
-        telemetryHandler.post(runnable)
+        handler.post(loop)
     }
 
-    private fun readNumberProperty(target: Any?, methodName: String): Double? {
-        if (target == null) return null
-        return try {
-            val methods: Array<Method> = target.javaClass.methods
-            val method = methods.firstOrNull { m: Method -> m.name == methodName && m.parameterCount == 0 }
-            val value = method?.invoke(target)
-            (value as? Number)?.toDouble()
-        } catch (_: Exception) {
-            null
+    private fun getDir(deg: Double): String {
+        val d = (deg + 360.0) % 360.0
+        return when {
+            d >= 337.5 || d < 22.5 -> "N"
+            d < 67.5 -> "NE"
+            d < 112.5 -> "E"
+            d < 157.5 -> "SE"
+            d < 202.5 -> "S"
+            d < 247.5 -> "SW"
+            d < 292.5 -> "W"
+            else -> "NW"
         }
     }
 
-    private fun readObjectProperty(target: Any?, methodName: String): Any? {
-        if (target == null) return null
-        return try {
-            val methods: Array<Method> = target.javaClass.methods
-            val method = methods.firstOrNull { m: Method -> m.name == methodName && m.parameterCount == 0 }
-            method?.invoke(target)
-        } catch (_: Exception) {
-            null
+    private fun getTargetGrid(): Pair<Double, Double> {
+        val crs = CRSFactory()
+        val zone = ((droneLon + 180) / 6).toInt() + 1
+        val utm = crs.createFromParameters("UTM", "+proj=utm +zone=$zone +datum=WGS84 +units=m +no_defs")
+        val tf = CoordinateTransformFactory().createTransform(crs.createFromName("EPSG:4326"), utm)
+        val dst = ProjCoordinate()
+        tf.transform(ProjCoordinate(droneLon, droneLat), dst)
+
+        if (gimbalPitch <= -89.0) return Pair(dst.x, dst.y)
+        val rad = Math.toRadians(-gimbalPitch.coerceIn(-89.0, -5.0))
+        val dist = if (droneRelAlt > 1.0) droneRelAlt / tan(rad) else 0.0
+        val yawRad = Math.toRadians(droneYaw)
+        return Pair(dst.x + dist * sin(yawRad), dst.y + dist * cos(yawRad))
+    }
+
+    private fun updateUI() {
+        val hdg = droneYaw.roundToInt()
+        tvZoneInfo?.text = "OT:360° | HDG:${if (hdg == 0) 360 else hdg}°(${getDir(droneYaw)})"
+        if (droneLat == 0.0 || droneLon == 0.0) return
+
+        val (tE, tN) = getTargetGrid()
+        tvLiveAltitude?.text = "ALT: ${droneRelAlt.roundToInt()}m"
+        tvLiveDroneGrid?.text = "TGT E:${tE.roundToInt()} N:${tN.roundToInt()} | HT:${takeoffGroundAmsl.roundToInt()}m"
+        if (isTargetLocked) {
+            tvDistanceInfo?.text = "DIST: ${hypot(tE - lockedEasting, tN - lockedNorthing).roundToInt()}m"
         }
     }
 
-    private fun readDroneStateSafely(drone: IAutelDroneDevice) {
-        try {
-            val stateData = drone.getDeviceStateData()
-            val flightData = stateData?.flightControlData
+    private fun setupButtons() {
+        findViewById<Button>(R.id.btn_lock_target)?.setOnClickListener { lockTarget() }
+        findViewById<Button>(R.id.btn_record_shot)?.setOnClickListener { recordShot() }
+        findViewById<Button>(R.id.btn_rth)?.setOnClickListener { sendRth() }
+        btnVoice?.setOnClickListener {
+            isVoiceListening = !isVoiceListening
+            btnVoice?.text = if (isVoiceListening) "MIC: ON" else "MIC: OFF"
+            if (isVoiceListening) startListening() else speechRecognizer?.stopListening()
+        }
+    }
 
-            if (flightData != null) {
-                droneLat = flightData.droneLatitude
-                droneLon = flightData.droneLongitude
+    private fun lockTarget() {
+        if (droneLat == 0.0 || droneLon == 0.0) {
+            speak("Waiting for drone GPS")
+            return
+        }
+        val (tE, tN) = getTargetGrid()
+        lockedEasting = tE
+        lockedNorthing = tN
+        isTargetLocked = true
+        shotCount = 0
+        tvSavedEasting?.text = "Easting : ${tE.roundToInt()}"
+        tvSavedNorthing?.text = "Northing: ${tN.roundToInt()}"
+        tvSavedHeight?.text = "Tgt Ht  : ${takeoffGroundAmsl.roundToInt()}m"
+        tvFos1?.text = "Shot 1: Ready"
+        tvFos2?.text = "Shot 2: Ready"
+        speak("Target locked")
+    }
+
+    private fun recordShot() {
+        if (!isTargetLocked) {
+            speak("Lock target first")
+            return
+        }
+        val (sE, sN) = getTargetGrid()
+        val dE = sE - lockedEasting
+        val dN = sN - lockedNorthing
+        val err = hypot(dE, dN)
+        shotCount++
+
+        val top = "S$shotCount E:${sE.roundToInt()} N:${sN.roundToInt()}"
+        val bot = if (err <= 20.0) {
+            speak("Target hit! Fire for effect!")
+            "TARGET HIT! FIRE FOR EFFECT (${err.roundToInt()}m)"
+        } else {
